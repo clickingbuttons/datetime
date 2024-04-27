@@ -120,6 +120,57 @@ pub fn Advanced(decimal_precision: comptime_int) type {
         pub fn add(self: Self, duration: Duration) Self {
             return self.addWithOverflow(duration)[0];
         }
+
+        pub fn parseRfc3339(str: []const u8) !Self {
+            if (str.len < "hh:mm:ss".len) return error.Parsing;
+            if (str[2] != ':' or str[5] != ':') return error.Parsing;
+
+            const hour = try std.fmt.parseInt(Hour, str[0..2], 10);
+            const minute = try std.fmt.parseInt(Minute, str[3..5], 10);
+            const second = try std.fmt.parseInt(Second, str[6..8], 10);
+
+            var subsecond: Subsecond = 0;
+            if (str.len > 9 and str[8] == '.') {
+                const subsecond_str = str[9..];
+                // Choose largest performant type.
+                // Ideally, this would allow infinite precision.
+                const T = f64;
+                var subsecondf = try std.fmt.parseFloat(T, subsecond_str);
+                const actual_precision: T = @floatFromInt(subsecond_str.len);
+                subsecondf *= std.math.pow(T, 10, precision - actual_precision);
+
+                subsecond = @intFromFloat(subsecondf);
+            }
+
+            return .{ .hour = hour, .minute = minute, .second = second, .subsecond = subsecond };
+        }
+
+        fn fmtRfc3339(self: Self, writer: anytype) !void {
+            if (self.hour > 24 or self.minute > 59 or self.second > 60) return error.Range;
+            try writer.print("{d:0>2}:{d:0>2}:{d:0>2}", .{ self.hour, self.minute, self.second });
+            if (self.subsecond != 0) {
+                // We could trim trailing zeros here to save space.
+                try writer.print(".{d}", .{self.subsecond});
+            }
+        }
+
+        pub fn format(
+            self: Self,
+            comptime fmt: []const u8,
+            options: std.fmt.FormatOptions,
+            writer: anytype,
+        ) (@TypeOf(writer).Error || error{Range})!void {
+            _ = options;
+
+            if (std.mem.eql(u8, "rfc3339", fmt)) {
+                try self.fmtRfc3339(writer);
+            } else {
+                try writer.print(
+                    "Time{{ .hour = {d}, .minute = .{d}, .second = .{d} }}",
+                    .{ self.hour, self.minute, self.second },
+                );
+            }
+        }
     };
 }
 
@@ -138,6 +189,25 @@ test Advanced {
         .{ Milli.init(21, 57, 57, 999), @as(i64, -2) },
         t1.addWithOverflow(Milli.Duration.init(-25, -61, -61, -1001)),
     );
+
+    try expectEqual(Milli.init(22, 30, 0, 0), try Milli.parseRfc3339("22:30:00"));
+    try expectEqual(Milli.init(22, 30, 0, 0), try Milli.parseRfc3339("22:30:00.0000"));
+    try expectEqual(Milli.init(22, 30, 20, 100), try Milli.parseRfc3339("22:30:20.1"));
+
+    const expectError = std.testing.expectError;
+    try expectError(error.InvalidCharacter, Milli.parseRfc3339("22:30:20.1a00"));
+    try expectError(error.Parsing, Milli.parseRfc3339("02:00:0")); // missing second digit
+
+    var buf: [32]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&buf);
+    const time = Milli.init(22, 30, 20, 100);
+    try time.fmtRfc3339(stream.writer());
+    try std.testing.expectEqualStrings("22:30:20.100", stream.getWritten());
+
+    stream.reset();
+    const time2 = Milli.init(22, 30, 20, 100);
+    try time2.fmtRfc3339(stream.writer());
+    try std.testing.expectEqualStrings("22:30:20.100", stream.getWritten());
 }
 
 /// Time with second precision.

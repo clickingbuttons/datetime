@@ -62,7 +62,7 @@ pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_
 
             pub const epoch_ = Comptime.init(0, 3, 1);
 
-            inline fn toGregorian(self: Computational, N_Y: UIntFitting(365)) Date {
+            inline fn toGregorian(self: Computational, N_Y: UIntFitting(365)) Self {
                 const last_day_of_jan = 306;
                 const J: UEpochDays = if (N_Y >= last_day_of_jan) 1 else 0;
 
@@ -76,7 +76,7 @@ pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_
                 };
             }
 
-            inline fn fromGregorian(date: Date) Computational {
+            inline fn fromGregorian(date: Self) Computational {
                 const month: UIntFitting(14) = date.month.numeric();
                 const Widened = std.meta.Int(
                     @typeInfo(Year).Int.signedness,
@@ -94,18 +94,18 @@ pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_
             }
         };
 
-        const Date = @This();
+        const Self = @This();
 
-        pub fn init(year: Year, month: MonthT, day: DayT) Date {
+        pub fn init(year: Year, month: MonthT, day: DayT) Self {
             return .{ .year = year, .month = month, .day = day };
         }
 
-        pub fn now() Date {
+        pub fn now() Self {
             const epoch_days = @divFloor(std.time.timestamp(), s_per_day);
             return fromEpoch(@intCast(epoch_days + zig_epoch_offset));
         }
 
-        pub fn fromEpoch(days: EpochDays) Date {
+        pub fn fromEpoch(days: EpochDays) Self {
             // This function is Figure 12 of the paper.
             // Besides being ported from C++, the following has changed:
             // - Seperate Year and UEpochDays types
@@ -155,7 +155,7 @@ pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_
             return computational.toGregorian(N_Y);
         }
 
-        pub fn toEpoch(self: Date) EpochDays {
+        pub fn toEpoch(self: Self) EpochDays {
             // This function is Figure 13 of the paper.
             const c = Computational.fromGregorian(self);
             const C = c.year / 100;
@@ -181,11 +181,11 @@ pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_
             }
         };
 
-        pub fn add(self: Date, duration: Duration) Date {
+        pub fn add(self: Self, duration: Duration) Self {
             const m = duration.months + self.month.numeric() - 1;
             const y = self.year + duration.years + @divFloor(m, 12);
 
-            const ym_epoch_day = Date{
+            const ym_epoch_day = Self{
                 .year = @intCast(y),
                 .month = @enumFromInt(std.math.comptimeMod(m, 12) + 1),
                 .day = 1,
@@ -198,9 +198,55 @@ pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_
         }
 
         pub const Weekday = WeekdayT;
-        pub fn weekday(self: Date) Weekday {
+        pub fn weekday(self: Self) Weekday {
             const epoch_days = self.toEpoch() +% epoch.weekday().numeric() -% 1;
             return @enumFromInt(std.math.comptimeMod(epoch_days, 7) +% 1);
+        }
+
+        pub fn parseRfc3339(str: *const [10]u8) !Self {
+            if (str[4] != '-' or str[7] != '-') return error.Parsing;
+
+            const year = try std.fmt.parseInt(IntFittingRange(0, 9999), str[0..4], 10);
+            const month = try std.fmt.parseInt(Month.Int, str[5..7], 10);
+            if (month < 1 or month > 12) return error.Parsing;
+            const m: Month = @enumFromInt(month);
+            const day = try std.fmt.parseInt(Day, str[8..10], 10);
+            if (day < 1 or day > m.days(isLeap(year))) return error.Parsing;
+
+            return .{
+                .year = @intCast(year), // if YearT is `i8` or `u8` this may fail. increase it to not fail.
+                .month = m,
+                .day = day,
+            };
+        }
+
+        fn fmtRfc3339(self: Self, writer: anytype) !void {
+            if (self.year < 0 or self.year > 9999) return error.Range;
+            if (self.day < 1 or self.day > 99) return error.Range;
+            if (self.month.numeric() < 1 or self.month.numeric() > 12) return error.Range;
+            try writer.print("{d:0>4}-{d:0>2}-{d:0>2}", .{
+                @as(IntFittingRange(0, 9999), @intCast(self.year)),
+                self.month.numeric(),
+                self.day,
+            });
+        }
+
+        pub fn format(
+            self: Self,
+            comptime fmt: []const u8,
+            options: std.fmt.FormatOptions,
+            writer: anytype,
+        ) (@TypeOf(writer).Error || error{Range})!void {
+            _ = options;
+
+            if (std.mem.eql(u8, "rfc3339", fmt)) {
+                try self.fmtRfc3339(writer);
+            } else {
+                try writer.print(
+                    "Date{{ .year = {d}, .month = .{s}, .day = .{d} }}",
+                    .{ self.year, @tagName(self.month), self.day },
+                );
+            }
         }
     };
 }
@@ -280,6 +326,15 @@ test Gregorian {
     try expectEqual(.tue, T.init(1980, .jan, 1).weekday());
     // $ date -d '1960-01-01'
     try expectEqual(.fri, d1.weekday());
+
+    try expectEqual(d1, try T.parseRfc3339("1960-01-01"));
+    try std.testing.expectError(error.Parsing, T.parseRfc3339("2000T01-01"));
+    try std.testing.expectError(error.InvalidCharacter, T.parseRfc3339("2000-01-AD"));
+
+    var buf: [32]u8 = undefined;
+    var stream = std.io.fixedBufferStream(&buf);
+    try d1.fmtRfc3339(stream.writer());
+    try std.testing.expectEqualStrings("1960-01-01", stream.getWritten());
 }
 
 const WeekdayInt = IntFittingRange(1, 7);

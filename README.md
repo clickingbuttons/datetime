@@ -32,26 +32,29 @@ your_lib_or_exe.root_module.addImport("datetime", datetime.module("datetime"));
 
 Run `zig build` and then copy the expected hash into `build.zig.zon`.
 
-## Demos
+## Usage
 
-Check out [the demos](./demos.zig). Here's a simple one to print the next week:
+Check out [the demos](./demos.zig). Here's a simple one:
 ```zig
 const std = @import("std");
 const datetime = @import("datetime");
 
-test "iterator" {
-    const from =  datetime.Date.now();
-    const to = from.add(.{ .days = 7 });
+test "now" {
+    const date = datetime.Date.now();
+    std.debug.print("today's date is {rfc3339}\n", .{ date });
 
-    var i = from;
-    while (i.toEpoch() < to.toEpoch()) : (i = i.add(.{ .days = 1 })) {
-        std.debug.print("{d}-{d:0>2}-{d:0>2} {s}\n", .{
-            i.year,
-            i.month.numeric(),
-            i.day,
-            @tagName(i.weekday()),
-        });
-    }
+    const time = datetime.Time.now();
+    std.debug.print("today's time is {rfc3339}\n", .{ time });
+
+    const nanotime = datetime.time.Nano.now();
+    std.debug.print("today's nanotime is {rfc3339}\n", .{ nanotime });
+
+    const dt = datetime.DateTime.now();
+    std.debug.print("today's date and time is {rfc3339}\n", .{ dt });
+
+    const NanoDateTime = datetime.datetime.Advanced(datetime.Date, datetime.time.Nano, false);
+    const ndt = NanoDateTime.now();
+    std.debug.print("today's date and nanotime is {rfc3339}\n", .{ ndt });
 }
 ```
 
@@ -60,8 +63,8 @@ Features:
     - Specify your own epoch.
 - Choose your own year and subsecond types.
 - Durations.
-- [ ] Timezones
-- [ ] RFC3339
+- Timezones
+- RFC3339
 - [ ] Localization
 - [ ] Leap seconds
 
