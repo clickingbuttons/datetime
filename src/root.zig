@@ -2,7 +2,7 @@
 const std = @import("std");
 pub const date = @import("./date.zig");
 pub const time = @import("./time.zig");
-const date_time = @import("./date_time.zig");
+pub const datetime = @import("./datetime.zig");
 
 /// Supports dates between years -32_768 and 32_768.
 pub const Date = date.Date;
@@ -10,9 +10,11 @@ pub const Month = Date.Month;
 pub const Day = Date.Day;
 pub const Weekday = Date.Weekday;
 
+pub const Time = time.Sec;
+
 /// Supports dates between years -32_768 and 32_768.
 /// Supports times at a second resolution.
-pub const DateTime = date_time.Advanced(Date, time.Sec);
+pub const DateTime = datetime.Advanced(Date, time.Sec);
 
 /// Tests EpochSeconds -> DateTime and DateTime -> EpochSeconds
 fn testEpoch(secs: DateTime.EpochSubseconds, dt: DateTime) !void {

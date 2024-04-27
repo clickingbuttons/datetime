@@ -1,16 +1,15 @@
-//! World standard calendar.
+//! World standard calar.
 //!
 //! Introduced in 1582 as a revision of the Julian calendar.
 const std = @import("std");
 const epoch_mod = @import("./epoch.zig");
-const ComptimeDate = epoch_mod.ComptimeDate;
 const IntFittingRange = std.math.IntFittingRange;
-const secs_per_day = std.time.s_per_day;
+const s_per_day = std.time.s_per_day;
 const expectEqual = std.testing.expectEqual;
 const assert = std.debug.assert;
 
 /// A date on the proleptic (projected backwards) Gregorian calendar.
-pub fn Advanced(comptime YearT: type, comptime epoch: ComptimeDate, shift: comptime_int) type {
+pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_int) type {
     return struct {
         year: Year,
         month: MonthT,
@@ -21,9 +20,9 @@ pub fn Advanced(comptime YearT: type, comptime epoch: ComptimeDate, shift: compt
         pub const Day = DayT;
 
         /// Inclusive.
-        pub const min_epoch_day = daysSince(epoch, ComptimeDate.init(std.math.minInt(Year), 1, 1));
+        pub const min_epoch_day = epoch.daysUntil(Comptime.init(std.math.minInt(Year), 1, 1));
         /// Inclusive.
-        pub const max_epoch_day = daysSince(epoch, ComptimeDate.init(std.math.maxInt(Year), 12, 31));
+        pub const max_epoch_day = epoch.daysUntil(Comptime.init(std.math.maxInt(Year), 12, 31));
 
         pub const EpochDays = IntFittingRange(min_epoch_day, max_epoch_day);
         // These are used for math that should not overflow.
@@ -37,8 +36,9 @@ pub fn Advanced(comptime YearT: type, comptime epoch: ComptimeDate, shift: compt
             @typeInfo(UEpochDays).Int.bits,
         );
 
+        pub const zig_epoch_offset = epoch_mod.zig.daysUntil(epoch);
         // Variables in paper.
-        const K = daysSince(Computational.epoch_, epoch) + era.days * shift;
+        const K = Computational.epoch_.daysUntil(epoch) + era.days * shift;
         const L = era.years * shift;
 
         // Type overflow checks
@@ -60,7 +60,7 @@ pub fn Advanced(comptime YearT: type, comptime epoch: ComptimeDate, shift: compt
             month: UIntFitting(14),
             day: UIntFitting(30),
 
-            pub const epoch_ = ComptimeDate.init(0, 3, 1);
+            pub const epoch_ = Comptime.init(0, 3, 1);
 
             inline fn toGregorian(self: Computational, N_Y: UIntFitting(365)) Date {
                 const last_day_of_jan = 306;
@@ -98,6 +98,11 @@ pub fn Advanced(comptime YearT: type, comptime epoch: ComptimeDate, shift: compt
 
         pub fn init(year: Year, month: MonthT, day: DayT) Date {
             return .{ .year = year, .month = month, .day = day };
+        }
+
+        pub fn now() Date {
+            const epoch_days = @divFloor(std.time.timestamp(), s_per_day);
+            return fromEpoch(@intCast(epoch_days + zig_epoch_offset));
         }
 
         pub fn fromEpoch(days: EpochDays) Date {
@@ -164,22 +169,21 @@ pub fn Advanced(comptime YearT: type, comptime epoch: ComptimeDate, shift: compt
         }
 
         pub const Duration = struct {
-            year: Year,
-            month: Duration.Month,
-            day: Duration.Day,
+            years: Year = 0,
+            months: Duration.Months = 0,
+            days: Duration.Days = 0,
 
-            pub const Day = std.meta.Int(.signed, @typeInfo(EpochDays).Int.bits);
-            pub const Month = std.meta.Int(.signed, @typeInfo(Duration.Day).Int.bits - std.math.log2_int(u16, 12));
+            pub const Days = std.meta.Int(.signed, @typeInfo(EpochDays).Int.bits);
+            pub const Months = std.meta.Int(.signed, @typeInfo(Duration.Days).Int.bits - std.math.log2_int(u16, 12));
 
-            /// May save some typing vs struct initialization.
-            pub fn init(year: Year, month: Duration.Month, day: Duration.Day) Duration {
-                return .{ .year = year, .month = month, .day = day };
+            pub fn init(years: Year, months: Duration.Months, days: Duration.Days) Duration {
+                return Duration{ .years = years, .months = months, .days = days };
             }
         };
 
         pub fn add(self: Date, duration: Duration) Date {
-            const m = duration.month + self.month.numeric() - 1;
-            const y = self.year + duration.year + @divFloor(m, 12);
+            const m = duration.months + self.month.numeric() - 1;
+            const y = self.year + duration.years + @divFloor(m, 12);
 
             const ym_epoch_day = Date{
                 .year = @intCast(y),
@@ -188,21 +192,20 @@ pub fn Advanced(comptime YearT: type, comptime epoch: ComptimeDate, shift: compt
             };
 
             var epoch_days = ym_epoch_day.toEpoch();
-            epoch_days += duration.day + self.day - 1;
+            epoch_days += duration.days + self.day - 1;
 
             return fromEpoch(epoch_days);
         }
 
         pub const Weekday = WeekdayT;
         pub fn weekday(self: Date) Weekday {
-            // 1970-01-01 is a Thursday.
-            const epoch_days = self.toEpoch() +% Weekday.thu.numeric();
-            return @enumFromInt(std.math.comptimeMod(epoch_days, 7));
+            const epoch_days = self.toEpoch() +% epoch.weekday().numeric() -% 1;
+            return @enumFromInt(std.math.comptimeMod(epoch_days, 7) +% 1);
         }
     };
 }
 
-pub fn Gregorian(comptime Year: type, comptime epoch: ComptimeDate) type {
+pub fn Gregorian(comptime Year: type, comptime epoch: Comptime) type {
     const shift = solveShift(Year, epoch) catch unreachable;
     return Advanced(Year, epoch, shift);
 }
@@ -362,37 +365,75 @@ test isLeap {
     try expectEqual(true, isLeap(2400));
 }
 
-fn daysSinceJan01(d: ComptimeDate) u16 {
-    const leap = isLeap(d.year);
-    var res: u16 = d.day;
-    for (1..d.month + 1) |j| {
-        const m: MonthT = @enumFromInt(j);
-        res += m.days(leap);
+/// Useful for epoch math.
+pub const Comptime = struct {
+    year: comptime_int,
+    month: Month,
+    day: Day,
+
+    pub const Month = std.math.IntFittingRange(1, 12);
+    pub const Day = std.math.IntFittingRange(1, 31);
+
+    pub fn init(year: comptime_int, month: Month, day: Day) Comptime {
+        return .{ .year = year, .month = month, .day = day };
     }
 
-    return res;
-}
+    pub fn daysUntil(from: Comptime, to: Comptime) comptime_int {
+        @setEvalBranchQuota(5000);
+        const eras = @divFloor(to.year - from.year, era.years);
+        comptime var res: comptime_int = eras * era.days;
 
-pub fn daysSince(from: ComptimeDate, to: ComptimeDate) comptime_int {
-    const eras = @divFloor(to.year - from.year, era.years);
-    comptime var res: comptime_int = eras * era.days;
+        var i = from.year + eras * era.years;
+        while (i < to.year) : (i += 1) {
+            res += if (isLeap(i)) 366 else 365;
+        }
 
-    var i = from.year + eras * era.years;
-    while (i < to.year) : (i += 1) {
-        res += if (isLeap(i)) 366 else 365;
+        res += @intCast(daysSinceJan01(to));
+        res -= @intCast(daysSinceJan01(from));
+
+        return res;
     }
 
-    res += @intCast(daysSinceJan01(to));
-    res -= @intCast(daysSinceJan01(from));
+    fn daysSinceJan01(d: Comptime) u16 {
+        const leap = isLeap(d.year);
+        var res: u16 = d.day - 1;
+        for (1..d.month) |j| {
+            const m: MonthT = @enumFromInt(j);
+            res += m.days(leap);
+        }
 
-    return res;
-}
+        return res;
+    }
 
-test daysSince {
-    try expectEqual(366, daysSince(ComptimeDate.init(2000, 1, 1), ComptimeDate.init(2001, 1, 1)));
-    try expectEqual(146_097, daysSince(ComptimeDate.init(0, 1, 1), ComptimeDate.init(400, 1, 1)));
-    try expectEqual(146_097 + 366, daysSince(ComptimeDate.init(0, 1, 1), ComptimeDate.init(401, 1, 1)));
-    try expectEqual(23_936_532, daysSince(ComptimeDate.init(std.math.minInt(i16), 1, 1), ComptimeDate.init(std.math.maxInt(i16) + 1, 1, 1)));
+    pub fn weekday(d: Comptime) WeekdayT {
+        // 1970-01-01 is a Thursday.
+        const known_date = epoch_mod.unix;
+        const known_date_weekday: comptime_int = @intFromEnum(WeekdayT.thu);
+        const start_of_week: comptime_int = @intFromEnum(WeekdayT.mon);
+
+        const epoch_days = known_date.daysUntil(d) +% known_date_weekday -% start_of_week;
+        return @enumFromInt(std.math.comptimeMod(epoch_days, 7) +% start_of_week);
+    }
+};
+
+test Comptime {
+    try expectEqual(1, Comptime.init(2000, 1, 1).daysUntil(Comptime.init(2000, 1, 2)));
+    try expectEqual(366, Comptime.init(2000, 1, 1).daysUntil(Comptime.init(2001, 1, 1)));
+    try expectEqual(146_097, Comptime.init(0, 1, 1).daysUntil(Comptime.init(400, 1, 1)));
+    try expectEqual(146_097 + 366, Comptime.init(0, 1, 1).daysUntil(Comptime.init(401, 1, 1)));
+    const from = Comptime.init(std.math.minInt(i16), 1, 1);
+    const to = Comptime.init(std.math.maxInt(i16) + 1, 1, 1);
+    try expectEqual(23_936_532, from.daysUntil(to));
+
+    try expectEqual(WeekdayT.thu, Comptime.init(1970, 1, 1).weekday());
+    const d1 = Comptime.init(2024, 4, 27);
+    try expectEqual(19_840, epoch_mod.unix.daysUntil(d1));
+    try expectEqual(WeekdayT.sat, d1.weekday());
+
+    try expectEqual(WeekdayT.wed, Comptime.init(1969, 12, 31).weekday());
+    const d2 = Comptime.init(1960, 1, 1);
+    try expectEqual(-3653, epoch_mod.unix.daysUntil(d2));
+    try expectEqual(WeekdayT.fri, d2.weekday());
 }
 
 /// The Gregorian calendar repeats every 400 years.
@@ -415,7 +456,7 @@ fn UIntFitting(to: comptime_int) type {
 
 /// Finds minimum epoch shift that covers the range:
 /// [std.math.minInt(Year), std.math.maxInt(Year)]
-fn solveShift(comptime Year: type, comptime epoch: ComptimeDate) !comptime_int {
+fn solveShift(comptime Year: type, comptime epoch: Comptime) !comptime_int {
     // TODO: linear system of equations solver
     _ = epoch;
     return @divFloor(std.math.maxInt(Year), era.years) + 1;

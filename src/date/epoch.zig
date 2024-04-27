@@ -1,18 +1,4 @@
-const std = @import("std");
-
-/// Useful for calculating days between epochs.
-pub const ComptimeDate = struct {
-    year: comptime_int,
-    month: Month,
-    day: Day,
-
-    pub const Month = std.math.IntFittingRange(1, 12);
-    pub const Day = std.math.IntFittingRange(1, 31);
-
-    pub fn init(year: comptime_int, month: Month, day: Day) ComptimeDate {
-        return .{ .year = year, .month = month, .day = day };
-    }
-};
+const ComptimeDate = @import("./gregorian.zig").Comptime;
 
 pub const posix = ComptimeDate.init(1970, 1, 1);
 pub const dos = ComptimeDate.init(1980, 1, 1);
@@ -26,6 +12,7 @@ pub const clr = ComptimeDate.init(1, 1, 1);
 pub const uefi = ComptimeDate.init(1582, 10, 15);
 pub const efi = ComptimeDate.init(1900, 1, 1);
 
+pub const zig = unix;
 pub const unix = posix;
 pub const android = posix;
 pub const os2 = dos;
