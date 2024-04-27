@@ -20,4 +20,4 @@ Features:
 - There are uses for different precisions for years, subseconds, and UTC offsets.
 - There are uses for different epochs.
 
-[^1]: Epoch conversion implemented using [Euclidean Affine Functions by Cassio and Neri.](https://arxiv.org/pdf/2102.06959)
+[^1]: [Euclidean Affine Functions by Cassio and Neri.](https://arxiv.org/pdf/2102.06959)

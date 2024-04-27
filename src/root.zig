@@ -1,4 +1,4 @@
-//! Exports common date, time, and datetime types.
+//! Gregorian types.
 const std = @import("std");
 pub const epoch = @import("./date/epoch.zig");
 pub const date = @import("./date.zig");
