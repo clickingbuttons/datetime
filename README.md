@@ -7,7 +7,7 @@
 Generic Date, Time, and DateTime library.
 
 Features:
-- Convert to/from epoch subseconds using fastest known algorithm [^1].
+- Convert to/from epoch subseconds using world's fastest known algorithm. [^1]
     - Specify your own epoch.
 - Choose your own year and subsecond types.
 - Durations.
@@ -17,7 +17,7 @@ Features:
 - [ ] Leap seconds
 
 ## Why yet another date time library?
-- There are uses for different year, subsecond precisions, and time offset precision.
+- There are uses for different precisions for years, subseconds, and UTC offsets.
 - There are uses for different epochs.
 
 [^1]: Epoch conversion implemented using [Euclidean Affine Functions by Cassio and Neri.](https://arxiv.org/pdf/2102.06959)
