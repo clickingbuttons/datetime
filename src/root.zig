@@ -1,20 +1,15 @@
 //! Gregorian types.
 const std = @import("std");
-pub const epoch = @import("./date/epoch.zig");
 pub const date = @import("./date.zig");
 pub const time = @import("./time.zig");
 const date_time = @import("./date_time.zig");
 
-/// A Gregorian Date using days since `1970-01-01` for its epoch methods.
-///
 /// Supports dates between years -32_768 and 32_768.
-pub const Date = date.Gregorian(i16, epoch.posix);
+pub const Date = date.Date;
 pub const Month = Date.Month;
 pub const Day = Date.Day;
 pub const Weekday = Date.Weekday;
 
-/// A DateTime using days since `1970-01-01` for its epoch methods.
-///
 /// Supports dates between years -32_768 and 32_768.
 /// Supports times at a second resolution.
 pub const DateTime = date_time.Advanced(Date, time.Sec);
@@ -29,7 +24,7 @@ fn testEpoch(secs: DateTime.EpochSubseconds, dt: DateTime) !void {
 test DateTime {
     // $ date -d @31535999 --iso-8601=seconds
     try std.testing.expectEqual(8, @sizeOf(DateTime));
-    try testEpoch(0, .{ .date = .{ .year = 1970, .month = .jan, .day = 1 } });
+    try testEpoch(0, .{ .date = DateTime.Date.init(1970, .jan, 1) });
     try testEpoch(31535999, .{
         .date = .{ .year = 1970, .month = .dec, .day = 31 },
         .time = .{ .hour = 23, .minute = 59, .second = 59 },
@@ -60,6 +55,5 @@ test DateTime {
 
 test {
     _ = date;
-    _ = epoch;
     _ = time;
 }

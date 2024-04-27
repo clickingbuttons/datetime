@@ -22,6 +22,13 @@ pub fn Advanced(comptime DateT: type, comptime TimeT: type) type {
 
         const Self = @This();
 
+        pub fn init(year: Date.Year, month: Date.Month, day: Date.Day, hour: Time.Hour, minute: Time.Minute, second: Time.Second, subsecond: Time.Subsecond) Self {
+            return .{
+                .date = Date.init(year, month, day),
+                .time = Time.init(hour, minute, second, subsecond),
+            };
+        }
+
         /// New date time from fractional seconds since `Date.epoch`.
         pub fn fromEpoch(subseconds: EpochSubseconds) Self {
             const days = @divFloor(subseconds, s_per_day * Time.subseconds_per_s);
@@ -39,19 +46,30 @@ pub fn Advanced(comptime DateT: type, comptime TimeT: type) type {
             return res;
         }
 
+        pub const Duration = struct {
+            date: Date.Duration,
+            time: Time.Duration,
+        };
+
         pub fn add(
             self: Self,
-            year: Date.Year,
-            month: Date.MonthAdd,
-            day: Date.IEpochDays,
-            hour: i64,
-            minute: i64,
-            second: i64,
-            subsecond: i64,
+            duration: Duration,
         ) Self {
-            const time = self.time.addWithOverflow(hour, minute, second, subsecond);
-            const date = self.date.add(year, month, day + time.day_overflow);
-            return .{ .date = date, .time = time.time };
+            const time = self.time.addWithOverflow(duration.time);
+            var duration_date = duration.date;
+            duration_date.day += @intCast(time[1]);
+            const date = self.date.add(duration_date);
+            return .{ .date = date, .time = time[0] };
         }
     };
+}
+
+test Advanced {
+    const T = Advanced(date_mod.Date, time_mod.Sec);
+    const a = T.init(1970, .jan, 1, 0, 0, 0, 0);
+    const duration = T.Duration{
+        .date = T.Date.Duration.init(1, 1, 1),
+        .time = T.Time.Duration.init(25, 1, 1, 0),
+    };
+    try std.testing.expectEqual(T.init(1971, .feb, 3, 1, 1, 1, 0), a.add(duration));
 }

@@ -1,7 +1,6 @@
-//! Introduced in 1582 as a revision of the Julian calendar.
+//! World standard calendar.
 //!
-//! Currently implemented using Euclidian Affine Transforms:
-//! https://onlinelibrary.wiley.com/doi/epdf/10.1002/spe.3172
+//! Introduced in 1582 as a revision of the Julian calendar.
 const std = @import("std");
 const epoch_mod = @import("./epoch.zig");
 const ComptimeDate = epoch_mod.ComptimeDate;
@@ -10,17 +9,16 @@ const secs_per_day = std.time.s_per_day;
 const expectEqual = std.testing.expectEqual;
 const assert = std.debug.assert;
 
-/// A proleptic (projected backwards) Gregorian calendar date.
-/// `epoch_` is in terms of days since 1970-01-01.
-///
-/// This implementation requires the `EpochDays` range cover all possible values of `YearT`.
+/// A date on the proleptic (projected backwards) Gregorian calendar.
 pub fn Advanced(comptime YearT: type, comptime epoch: ComptimeDate, shift: comptime_int) type {
     return struct {
         year: Year,
-        month: Month,
-        day: Day,
+        month: MonthT,
+        day: DayT,
 
         pub const Year = YearT;
+        pub const Month = MonthT;
+        pub const Day = DayT;
 
         /// Inclusive.
         pub const min_epoch_day = daysSince(epoch, ComptimeDate.init(std.math.minInt(Year), 1, 1));
@@ -74,7 +72,7 @@ pub fn Advanced(comptime YearT: type, comptime epoch: ComptimeDate, shift: compt
                 return .{
                     .year = @intCast(year),
                     .month = @enumFromInt(month),
-                    .day = @as(Day, self.day) + 1,
+                    .day = @as(DayT, self.day) + 1,
                 };
             }
 
@@ -98,8 +96,7 @@ pub fn Advanced(comptime YearT: type, comptime epoch: ComptimeDate, shift: compt
 
         const Date = @This();
 
-        /// May save some typing vs struct initialization.
-        pub fn init(year: Year, month: Month, day: Day) Date {
+        pub fn init(year: Year, month: MonthT, day: DayT) Date {
             return .{ .year = year, .month = month, .day = day };
         }
 
@@ -301,7 +298,7 @@ pub const WeekdayT = enum(WeekdayInt) {
 };
 
 const MonthInt = IntFittingRange(1, 12);
-pub const Month = enum(MonthInt) {
+pub const MonthT = enum(MonthInt) {
     jan = 1,
     feb = 2,
     mar = 3,
@@ -333,43 +330,43 @@ pub const Month = enum(MonthInt) {
             28;
     }
 };
-pub const Day = IntFittingRange(1, 31);
+pub const DayT = IntFittingRange(1, 31);
 
-test Month {
-    try expectEqual(31, Month.jan.days(false));
-    try expectEqual(29, Month.feb.days(true));
-    try expectEqual(28, Month.feb.days(false));
-    try expectEqual(31, Month.mar.days(false));
-    try expectEqual(30, Month.apr.days(false));
-    try expectEqual(31, Month.may.days(false));
-    try expectEqual(30, Month.jun.days(false));
-    try expectEqual(31, Month.jul.days(false));
-    try expectEqual(31, Month.aug.days(false));
-    try expectEqual(30, Month.sep.days(false));
-    try expectEqual(31, Month.oct.days(false));
-    try expectEqual(30, Month.nov.days(false));
-    try expectEqual(31, Month.dec.days(false));
+test MonthT {
+    try expectEqual(31, MonthT.jan.days(false));
+    try expectEqual(29, MonthT.feb.days(true));
+    try expectEqual(28, MonthT.feb.days(false));
+    try expectEqual(31, MonthT.mar.days(false));
+    try expectEqual(30, MonthT.apr.days(false));
+    try expectEqual(31, MonthT.may.days(false));
+    try expectEqual(30, MonthT.jun.days(false));
+    try expectEqual(31, MonthT.jul.days(false));
+    try expectEqual(31, MonthT.aug.days(false));
+    try expectEqual(30, MonthT.sep.days(false));
+    try expectEqual(31, MonthT.oct.days(false));
+    try expectEqual(30, MonthT.nov.days(false));
+    try expectEqual(31, MonthT.dec.days(false));
 }
 
-pub fn is_leap(year: anytype) bool {
+pub fn isLeap(year: anytype) bool {
     return if (@mod(year, 25) != 0)
         year & (4 - 1) == 0
     else
         year & (16 - 1) == 0;
 }
 
-test is_leap {
-    try expectEqual(false, is_leap(2095));
-    try expectEqual(true, is_leap(2096));
-    try expectEqual(false, is_leap(2100));
-    try expectEqual(true, is_leap(2400));
+test isLeap {
+    try expectEqual(false, isLeap(2095));
+    try expectEqual(true, isLeap(2096));
+    try expectEqual(false, isLeap(2100));
+    try expectEqual(true, isLeap(2400));
 }
 
 fn daysSinceJan01(d: ComptimeDate) u16 {
-    const leap = is_leap(d.year);
+    const leap = isLeap(d.year);
     var res: u16 = d.day;
     for (1..d.month + 1) |j| {
-        const m: Month = @enumFromInt(j);
+        const m: MonthT = @enumFromInt(j);
         res += m.days(leap);
     }
 
@@ -382,7 +379,7 @@ pub fn daysSince(from: ComptimeDate, to: ComptimeDate) comptime_int {
 
     var i = from.year + eras * era.years;
     while (i < to.year) : (i += 1) {
-        res += if (is_leap(i)) 366 else 365;
+        res += if (isLeap(i)) 366 else 365;
     }
 
     res += @intCast(daysSinceJan01(to));

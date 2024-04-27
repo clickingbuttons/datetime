@@ -34,7 +34,6 @@ pub fn Advanced(precision_: comptime_int) type {
         pub const subseconds_per_hour = 60 * subseconds_per_min;
         pub const subseconds_per_day = 24 * subseconds_per_hour;
 
-        /// May save some typing vs struct initialization.
         pub fn init(hour: Hour, minute: Minute, second: Second, subsecond: Subsecond) Self {
             return .{ .hour = hour, .minute = minute, .second = second, .subsecond = subsecond };
         }
@@ -87,14 +86,14 @@ pub fn Advanced(precision_: comptime_int) type {
         /// Returns value and how many days overflowed.
         pub fn addWithOverflow(self: Self, duration: Duration) struct { Self, i64 } {
             const fs = duration.subsecond + self.subsecond;
-            const s = duration.second + self.second + @divFloor(fs, 1000);
+            const s = duration.second + self.second + @divFloor(@as(i64, fs), 1000);
             const m = duration.minute + self.minute + @divFloor(s, 60);
             const h = duration.hour + self.hour + @divFloor(m, 60);
             const overflow = @divFloor(h, 24);
 
             return .{
                 Self{
-                    .subsecond = std.math.comptimeMod(fs, 1000),
+                    .subsecond = if (Duration.Subsecond == u0) 0 else std.math.comptimeMod(fs, 1000),
                     .second = std.math.comptimeMod(s, 60),
                     .minute = std.math.comptimeMod(m, 60),
                     .hour = std.math.comptimeMod(h, 24),

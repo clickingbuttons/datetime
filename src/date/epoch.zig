@@ -1,5 +1,6 @@
 const std = @import("std");
 
+/// Useful for calculating days between epochs.
 pub const ComptimeDate = struct {
     year: comptime_int,
     month: Month,
