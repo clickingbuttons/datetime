@@ -7,14 +7,14 @@
 Generic Date, Time, and DateTime library.
 
 Features:
-    - Convert to/from epoch subseconds using fastest known algorithm [^1].
-        - Specify your own epoch.
-    - Choose your own year and subsecond types.
-    - Durations.
-    - [ ] Timezones
-    - [ ] RFC3339
-    - [ ] Localization
-    - [ ] Leap seconds
+- Convert to/from epoch subseconds using fastest known algorithm [^1].
+    - Specify your own epoch.
+- Choose your own year and subsecond types.
+- Durations.
+- [ ] Timezones
+- [ ] RFC3339
+- [ ] Localization
+- [ ] Leap seconds
 
 ## Why yet another date time library?
 - There are uses for different year, subsecond precisions, and time offset precision.
