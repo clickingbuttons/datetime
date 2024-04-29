@@ -60,11 +60,14 @@ test "now" {
 
 Features:
 - Convert to/from epoch subseconds using world's fastest known algorithm. [^1]
-    - Specify your own epoch.
-- Choose your own year and subsecond types.
-- Durations.
-- Timezones
-- RFC3339
+- Choose:
+    - Date's `Year` type for more or less precision.
+    - Time's `Subsecond` type for more or less precision.
+    - Date's `epoch` for epoch subsecond conversion.
+    - Whether DateTime has an `OffsetSeconds` field.
+- Durations with addition.
+- RFC3339 parsing and formatting.
+    - Timezone offset.
 - [ ] Localization
 - [ ] Leap seconds
 

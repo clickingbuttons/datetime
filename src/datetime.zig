@@ -64,6 +64,7 @@ pub fn Advanced(comptime DateT: type, comptime TimeT: type, comptime has_offset:
             var res: EpochSubseconds = 0;
             res += @as(EpochSubseconds, self.date.toEpoch()) * subseconds_per_day;
             res += self.time.toDaySeconds();
+            res += @as(EpochSubseconds, self.offset) * subseconds_per_day;
             return res;
         }
 
