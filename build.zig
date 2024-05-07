@@ -4,6 +4,10 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const datetime = b.addModule("datetime", .{
+        .root_source_file = b.path("src/root.zig"),
+    });
+
     const lib = b.addStaticLibrary(.{
         .name = "datetime",
         .root_source_file = b.path("src/root.zig"),
@@ -25,7 +29,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    demo.root_module.addImport("datetime", &lib.root_module);
+    demo.root_module.addImport("datetime", datetime);
     const run_demo = b.addRunArtifact(demo);
 
     const test_step = b.step("test", "Run unit tests");
