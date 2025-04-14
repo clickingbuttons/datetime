@@ -1,5 +1,86 @@
-.gdb_history
-.zig-cache/
+### Zig ###
+
 zig-cache/
+.zig-cache/
 zig-out/
-docs/
+
+### LLVM ###
+
+*.dSYM
+
+### Java ###
+
+*.class
+*.log
+*.ctxt
+.mtj.tmp/
+*.jar
+!gradle-wrapper.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+### Leiningen ###
+
+/.lein-*
+/.nrepl-port
+/.prepl-port
+
+### IntelliJ IDEA ###
+
+*.iml
+*.ipr
+modules.xml
+.idea/
+cmake-build-*/
+*.iws
+out/
+.idea_modules/
+atlassian-ide-plugin.xml
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+### VSCode/Calva ###
+
+.calva/
+.clj-kondo/
+.lsp/
+
+### Misc ###
+
+/target
+/classes
+/checkouts
+profiles.clj
+pom.xml
+pom.xml.asc
+
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build
+/local/*.hprof
+
+### Mercurial ###
+
+.hgignore
+.hg/
+
+# Ignore Jenv version tagging
+
+.java-version
+
+# Sublime Text
+
+*.sublime-workspace
+
+# macOS
+
+.DS_Store
+

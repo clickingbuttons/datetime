@@ -24,7 +24,7 @@ pub fn Advanced(decimal_precision: comptime_int) type {
         pub const Second = IntFittingRange(0, 60);
         pub const Subsecond = IntFittingRange(0, if (decimal_precision == 0) 0 else subseconds_per_s);
         pub const DaySubseconds = IntFittingRange(0, s_per_day * subseconds_per_s);
-        const IDaySubseconds = std.meta.Int(.signed, @typeInfo(DaySubseconds).Int.bits + 1);
+        const IDaySubseconds = std.meta.Int(.signed, @typeInfo(DaySubseconds).int.bits + 1);
 
         const Self = @This();
 
@@ -45,7 +45,7 @@ pub fn Advanced(decimal_precision: comptime_int) type {
                     return fromDaySeconds(day_seconds);
                 },
                 1...9 => {
-                    const day_nanos =  std.math.comptimeMod(std.time.nanoTimestamp(), ns_per_day);
+                    const day_nanos = std.math.comptimeMod(std.time.nanoTimestamp(), ns_per_day);
                     const day_subseconds = @divFloor(day_nanos, subseconds_per_s / 1_000_000_000);
                     return fromDaySeconds(day_subseconds);
                 },

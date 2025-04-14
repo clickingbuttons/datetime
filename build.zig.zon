@@ -1,6 +1,7 @@
 .{
-    .name = "datetime",
-    .version = "0.0.3",
+    .name = .datetime,
+    .version = "0.0.4-hissyfit",
+    .fingerprint = 0x93f3c6ca207ab064, // This should _not_ match "real" datetime fingerprint!
     .paths = .{
         "build.zig",
         "build.zig.zon",
