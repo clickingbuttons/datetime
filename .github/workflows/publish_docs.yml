@@ -26,8 +26,6 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - uses: mlugg/setup-zig@v1
-        with:
-          version: 0.14.0
       - run: zig build-lib src/root.zig -femit-docs=docs -fno-emit-bin
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
