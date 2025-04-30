@@ -21,8 +21,8 @@ pub fn Advanced(comptime DateT: type, comptime TimeT: type, comptime has_offset:
         ///   6 = microseconds
         ///   9 = nanoseconds
         pub const EpochSubseconds = std.meta.Int(
-            @typeInfo(Date.EpochDays).Int.signedness,
-            @typeInfo(Date.EpochDays).Int.bits + std.math.log2_int_ceil(usize, Time.subseconds_per_day),
+            @typeInfo(Date.EpochDays).int.signedness,
+            @typeInfo(Date.EpochDays).int.bits + std.math.log2_int_ceil(usize, Time.subseconds_per_day),
         );
 
         const Self = @This();

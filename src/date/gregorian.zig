@@ -28,12 +28,12 @@ pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_
         // These are used for math that should not overflow.
         const UEpochDays = std.meta.Int(
             .unsigned,
-            std.math.ceilPowerOfTwoAssert(u16, @typeInfo(EpochDays).Int.bits),
+            std.math.ceilPowerOfTwoAssert(u16, @typeInfo(EpochDays).int.bits),
         );
-        const IEpochDays = std.meta.Int(.signed, @typeInfo(UEpochDays).Int.bits);
+        const IEpochDays = std.meta.Int(.signed, @typeInfo(UEpochDays).int.bits);
         const EpochDaysWide = std.meta.Int(
-            @typeInfo(EpochDays).Int.signedness,
-            @typeInfo(UEpochDays).Int.bits,
+            @typeInfo(EpochDays).int.signedness,
+            @typeInfo(UEpochDays).int.bits,
         );
 
         pub const zig_epoch_offset = epoch_mod.zig.daysUntil(epoch);
@@ -79,8 +79,8 @@ pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_
             inline fn fromGregorian(date: Self) Computational {
                 const month: UIntFitting(14) = date.month.numeric();
                 const Widened = std.meta.Int(
-                    @typeInfo(Year).Int.signedness,
-                    @typeInfo(UEpochDays).Int.bits,
+                    @typeInfo(Year).int.signedness,
+                    @typeInfo(UEpochDays).int.bits,
                 );
                 const widened: Widened = date.year;
                 const Y_G: UEpochDays = @bitCast(widened);
@@ -173,8 +173,8 @@ pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_
             months: Duration.Months = 0,
             days: Duration.Days = 0,
 
-            pub const Days = std.meta.Int(.signed, @typeInfo(EpochDays).Int.bits);
-            pub const Months = std.meta.Int(.signed, @typeInfo(Duration.Days).Int.bits - std.math.log2_int(u16, 12));
+            pub const Days = std.meta.Int(.signed, @typeInfo(EpochDays).int.bits);
+            pub const Months = std.meta.Int(.signed, @typeInfo(Duration.Days).int.bits - std.math.log2_int(u16, 12));
 
             pub fn init(years: Year, months: Duration.Months, days: Duration.Days) Duration {
                 return Duration{ .years = years, .months = months, .days = days };
@@ -525,7 +525,7 @@ test solveShift {
 }
 
 fn ComptimeDiv(comptime Num: type, comptime divisor: comptime_int) type {
-    const info = @typeInfo(Num).Int;
+    const info = @typeInfo(Num).int;
     return std.meta.Int(info.signedness, info.bits - std.math.log2(divisor));
 }
 
