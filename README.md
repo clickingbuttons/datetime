@@ -7,18 +7,8 @@
 Generic Date, Time, and DateTime library.
 
 ## Installation
-`build.zig.zon`
-```zig
-.{
-    .name = "yourProject",
-    .version = "0.0.1",
-
-    .dependencies = .{
-        .@"datetime" = .{
-            .url = "https://github.com/clickingbuttons/datetime/archive/refs/tags/latest-release.tar.gz",
-        },
-    },
-}
+```sh
+zig fetch --save "https://github.com/clickingbuttons/datetime/archive/refs/tags/0.14.0.tar.gz"
 ```
 
 `build.zig`
@@ -60,14 +50,16 @@ test "now" {
 
 Features:
 - Convert to/from epoch subseconds using world's fastest known algorithm. [^1]
-- Choose:
-    - Date's `Year` type for more or less precision.
-    - Time's `Subsecond` type for more or less precision.
-    - Date's `epoch` for epoch subsecond conversion.
-    - Whether DateTime has an `OffsetSeconds` field.
+- Choose your precision:
+    - Date's `Year` type.
+    - Time's `Subsecond` type.
+    - Date's `epoch` for subsecond conversion.
+    - Whether DateTime has an `OffsetSeconds` field
 - Durations with addition.
 - RFC3339 parsing and formatting.
     - Timezone offset.
+
+In-scope, PRs welcome:
 - [ ] Localization
 - [ ] Leap seconds
 
