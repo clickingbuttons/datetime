@@ -48,6 +48,8 @@ pub fn Advanced(comptime DateT: type, comptime TimeT: type, comptime has_offset:
         pub fn now() Self {
             return switch (Time.precision) {
                 0 => fromEpoch(@intCast(std.time.timestamp())),
+                3 => fromEpoch(@intCast(@divFloor(std.time.milliTimestamp(), Time.subseconds_per_s / 1_000))),
+                6 => fromEpoch(@intCast(@divFloor(std.time.microTimestamp(), Time.subseconds_per_s / 1_000_000))),
                 else => fromEpoch(@intCast(@divFloor(std.time.nanoTimestamp(), Time.subseconds_per_s / 1_000_000_000))),
             };
         }
