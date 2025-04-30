@@ -3,6 +3,8 @@ const date_mod = @import("./date.zig");
 const time_mod = @import("./time.zig");
 const epoch_mod = date_mod.epoch;
 const s_per_day = time_mod.s_per_day;
+const s_per_hour = std.time.s_per_hour;
+const s_per_min = std.time.s_per_min;
 
 pub fn Advanced(comptime DateT: type, comptime TimeT: type, comptime has_offset: bool) type {
     return struct {
@@ -136,7 +138,7 @@ pub fn Advanced(comptime DateT: type, comptime TimeT: type, comptime has_offset:
                 if (str[i + 2] != ':') return error.Parsing;
                 const offset_minute = try std.fmt.parseInt(OffsetSeconds, str[i + 3 ..][0..2], 10);
 
-                offset = sign * (offset_hour * 360 + offset_minute * 60);
+                offset = sign * (offset_hour * s_per_hour + offset_minute * s_per_min);
             }
 
             return .{ .date = date, .time = time, .offset = offset };
@@ -147,9 +149,9 @@ pub fn Advanced(comptime DateT: type, comptime TimeT: type, comptime has_offset:
             if (self.offset == 0) {
                 try writer.writeByte('Z');
             } else {
-                const hour_offset = @divFloor(self.offset, 360 * 60);
-                const minute_offset = @divFloor(self.offset - hour_offset * 360 * 60, 360);
-                try writer.writeByte(if (hour_offset < 0) '-' else '+');
+                const hour_offset = @divTrunc(self.offset, s_per_hour);
+                const minute_offset = @divTrunc(self.offset - hour_offset * s_per_hour, s_per_min);
+                try writer.writeByte(if (self.offset < 0) '-' else '+');
                 try writer.print("{d:0>2}:{d:0>2}", .{ @abs(hour_offset), @abs(minute_offset) });
             }
         }
@@ -181,13 +183,26 @@ test Advanced {
 
     // RFC 3339 section 5.8"
     try expectEqual(T.init(1985, .apr, 12, 23, 20, 50, 520, 0), try T.parseRfc3339("1985-04-12T23:20:50.52Z"));
-    try expectEqual(T.init(1996, .dec, 19, 16, 39, 57, 0, -8 * 360), try T.parseRfc3339("1996-12-19T16:39:57-08:00"));
+    try expectEqual(T.init(1996, .dec, 19, 16, 39, 57, 0, -8 * s_per_hour), try T.parseRfc3339("1996-12-19T16:39:57-08:00"));
     try expectEqual(T.init(1990, .dec, 31, 23, 59, 60, 0, 0), try T.parseRfc3339("1990-12-31T23:59:60Z"));
-    try expectEqual(T.init(1990, .dec, 31, 15, 59, 60, 0, -8 * 360), try T.parseRfc3339("1990-12-31T15:59:60-08:00"));
-    try expectEqual(T.init(1937, .jan, 1, 12, 0, 27, 870, 20 * 60), try T.parseRfc3339("1937-01-01T12:00:27.87+00:20"));
+    try expectEqual(T.init(1990, .dec, 31, 15, 59, 60, 0, -8 * s_per_hour), try T.parseRfc3339("1990-12-31T15:59:60-08:00"));
+    try expectEqual(T.init(1937, .jan, 1, 12, 0, 27, 870, 20 * s_per_min), try T.parseRfc3339("1937-01-01T12:00:27.87+00:20"));
+
+    // negative offset 
+    try expectEqual(T.init(1985, .apr, 12, 23, 20, 50, 520, -20 * s_per_min), try T.parseRfc3339("1985-04-12T23:20:50.52-00:20"));
+    try expectEqual(T.init(1985, .apr, 12, 23, 20, 50, 520, -10 * s_per_hour - 20 * s_per_min), try T.parseRfc3339("1985-04-12T23:20:50.52-10:20"));
 
     var buf: [32]u8 = undefined;
     var stream = std.io.fixedBufferStream(&buf);
-    try T.init(1937, .jan, 1, 12, 0, 27, 870, 20 * 360).fmtRfc3339(stream.writer());
+    try T.init(1937, .jan, 1, 12, 0, 27, 870, 20 * s_per_min).fmtRfc3339(stream.writer());
     try std.testing.expectEqualStrings("1937-01-01T12:00:27.870+00:20", stream.getWritten());
+
+    // negative offset  
+    stream.reset();
+    try T.init(1937, .jan, 1, 12, 0, 27, 870, -20 * s_per_min).fmtRfc3339(stream.writer());
+    try std.testing.expectEqualStrings("1937-01-01T12:00:27.870-00:20", stream.getWritten());
+
+    stream.reset();
+    try T.init(1937, .jan, 1, 12, 0, 27, 870, -1 * s_per_hour - 20 * s_per_min).fmtRfc3339(stream.writer());
+    try std.testing.expectEqualStrings("1937-01-01T12:00:27.870-01:20", stream.getWritten());
 }
