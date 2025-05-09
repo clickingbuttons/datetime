@@ -1,6 +1,9 @@
-//! World standard calar.
+//! World standard calendar.
 //!
 //! Introduced in 1582 as a revision of the Julian calendar.
+//!
+//! Can be projected backwards for dates before 1582 which makes it the
+//! "Proleptic Gregorian Calendar."
 const std = @import("std");
 const epoch_mod = @import("./epoch.zig");
 const IntFittingRange = std.math.IntFittingRange;

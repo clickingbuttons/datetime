@@ -4,7 +4,7 @@ pub const s_per_day = std.time.s_per_day;
 const ns_per_day = s_per_day * 1_000_000_000;
 
 /// A time of day with a subsecond field capable of holding values
-/// between 0 and 10 ** `precision_`.
+/// between 0 and 10 ^ `decimal_precision`.
 ///
 /// TimeAdvanced(0) = seconds
 /// TimeAdvanced(3) = milliseconds

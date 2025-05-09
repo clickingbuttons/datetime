@@ -11,7 +11,7 @@ Generic Date, Time, and DateTime library.
 zig fetch --save "https://github.com/clickingbuttons/datetime/archive/refs/tags/0.14.0.tar.gz"
 ```
 
-`build.zig`
+### build.zig
 ```zig
 const datetime = b.dependency("datetime", .{
     .target = target,
@@ -19,8 +19,6 @@ const datetime = b.dependency("datetime", .{
 });
 your_lib_or_exe.root_module.addImport("datetime", datetime.module("datetime"));
 ```
-
-Run `zig build` and then copy the expected hash into `build.zig.zon`.
 
 ## Usage
 
@@ -57,7 +55,7 @@ Features:
     - Whether DateTime has an `OffsetSeconds` field
 - Durations with addition.
 - RFC3339 parsing and formatting.
-    - Timezone offset.
+- Use Comptime dates for epoch math.
 
 In-scope, PRs welcome:
 - [ ] Localization
@@ -65,6 +63,6 @@ In-scope, PRs welcome:
 
 ## Why yet another date time library?
 - I frequently use different precisions for years, subseconds, and UTC offsets.
-- Systems use different epochs and Zig aims to be a sytems language.
+- Andrew [rejected this from stdlib.](https://github.com/ziglang/zig/pull/19549#issuecomment-2062091512)
 
 [^1]: [Euclidean Affine Functions by Cassio and Neri.](https://arxiv.org/pdf/2102.06959)
