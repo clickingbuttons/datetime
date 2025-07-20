@@ -1,7 +1,7 @@
 .{
     .name = .datetime,
-    .version = "0.14.0",
-    .minimum_zig_version = "0.14.0",
+    .version = "0.15.0-dev.1147+69cf40da6",
+    .minimum_zig_version = "0.15.0-dev.1147+69cf40da6",
     .fingerprint = 0x93f3c6cab5757db5, // Changing this has security and trust implications.
     .paths = .{
         "build.zig",
