@@ -223,7 +223,7 @@ pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_
             };
         }
 
-        fn fmtRfc3339(self: Self, writer: anytype) !void {
+        pub fn fmtRfc3339(self: Self, writer: *std.Io.Writer) !void {
             if (self.year < 0 or self.year > 9999) return error.Range;
             if (self.day < 1 or self.day > 99) return error.Range;
             if (self.month.numeric() < 1 or self.month.numeric() > 12) return error.Range;
@@ -236,20 +236,19 @@ pub fn Advanced(comptime YearT: type, comptime epoch: Comptime, shift: comptime_
 
         pub fn format(
             self: Self,
-            comptime fmt: []const u8,
-            options: std.fmt.FormatOptions,
-            writer: anytype,
-        ) (@TypeOf(writer).Error || error{Range})!void {
-            _ = options;
+            writer: *std.Io.Writer,
+        ) std.Io.Writer.Error!void {
+            self.fmtRfc3339(writer) catch return error.WriteFailed;
+        }
 
-            if (std.mem.eql(u8, "rfc3339", fmt)) {
-                try self.fmtRfc3339(writer);
-            } else {
-                try writer.print(
-                    "Date{{ .year = {d}, .month = .{s}, .day = .{d} }}",
-                    .{ self.year, @tagName(self.month), self.day },
-                );
-            }
+        pub fn formatStruct(
+            self: Self,
+            writer: *std.Io.Writer,
+        ) std.Io.Writer.Error!void {
+            writer.print(
+                "Date{{ .year = {d}, .month = .{s}, .day = {d} }}",
+                .{ self.year, @tagName(self.month), self.day },
+            ) catch return error.WriteFailed;
         }
     };
 }
@@ -335,9 +334,9 @@ test Gregorian {
     try std.testing.expectError(error.InvalidCharacter, T.parseRfc3339("2000-01-AD"));
 
     var buf: [32]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&buf);
-    try d1.fmtRfc3339(stream.writer());
-    try std.testing.expectEqualStrings("1960-01-01", stream.getWritten());
+    var writer = std.io.Writer.fixed(&buf);
+    try d1.fmtRfc3339(&writer);
+    try std.testing.expectEqualStrings("1960-01-01", writer.buffered());
 }
 
 const WeekdayInt = IntFittingRange(1, 7);

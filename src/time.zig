@@ -145,7 +145,7 @@ pub fn Advanced(decimal_precision: comptime_int) type {
             return .{ .hour = hour, .minute = minute, .second = second, .subsecond = subsecond };
         }
 
-        fn fmtRfc3339(self: Self, writer: anytype) !void {
+        pub fn fmtRfc3339(self: Self, writer: *std.Io.Writer) !void {
             if (self.hour > 24 or self.minute > 59 or self.second > 60) return error.Range;
             try writer.print("{d:0>2}:{d:0>2}:{d:0>2}", .{ self.hour, self.minute, self.second });
             if (self.subsecond != 0) {
@@ -156,20 +156,19 @@ pub fn Advanced(decimal_precision: comptime_int) type {
 
         pub fn format(
             self: Self,
-            comptime fmt: []const u8,
-            options: std.fmt.FormatOptions,
-            writer: anytype,
-        ) (@TypeOf(writer).Error || error{Range})!void {
-            _ = options;
+            writer: *std.Io.Writer,
+        ) std.Io.Writer.Error!void {
+            self.fmtRfc3339(writer) catch return error.WriteFailed;
+        }
 
-            if (std.mem.eql(u8, "rfc3339", fmt)) {
-                try self.fmtRfc3339(writer);
-            } else {
-                try writer.print(
-                    "Time{{ .hour = {d}, .minute = .{d}, .second = .{d} }}",
-                    .{ self.hour, self.minute, self.second },
-                );
-            }
+        pub fn formatStruct(
+            self: Self,
+            writer: *std.Io.Writer,
+        ) std.Io.Writer.Error!void {
+            writer.print(
+                "Time{{ .hour = {d}, .minute = {d}, .second = {d}, .subsecond = {d} }}",
+                .{ self.hour, self.minute, self.second, self.subsecond },
+            ) catch return error.WriteFailed;
         }
     };
 }
@@ -199,15 +198,15 @@ test Advanced {
     try expectError(error.Parsing, Milli.parseRfc3339("02:00:0")); // missing second digit
 
     var buf: [32]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&buf);
+    var writer = std.io.Writer.fixed(&buf);
     const time = Milli.init(22, 30, 20, 100);
-    try time.fmtRfc3339(stream.writer());
-    try std.testing.expectEqualStrings("22:30:20.100", stream.getWritten());
+    try time.fmtRfc3339(&writer);
+    try std.testing.expectEqualStrings("22:30:20.100", writer.buffered());
 
-    stream.reset();
+    writer = std.io.Writer.fixed(&buf);
     const time2 = Milli.init(22, 30, 20, 100);
-    try time2.fmtRfc3339(stream.writer());
-    try std.testing.expectEqualStrings("22:30:20.100", stream.getWritten());
+    try time2.fmtRfc3339(&writer);
+    try std.testing.expectEqualStrings("22:30:20.100", writer.buffered());
 }
 
 /// Time with second precision.
