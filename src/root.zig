@@ -17,22 +17,6 @@ pub const Time = time.Sec;
 /// * No timezones.
 pub const DateTime = datetime.Advanced(Date, time.Sec, false);
 
-fn fmtRfc3339Impl(
-    date_time_or_datetime: Date,
-    comptime fmt: []const u8,
-    options: std.fmt.FormatOptions,
-    writer: anytype,
-) !void {
-    _ = fmt;
-    _ = options;
-    try date_time_or_datetime.toRfc3339(writer);
-}
-
-/// Return a RFC 3339 formatter for a Date, Time, or DateTime type.
-pub fn fmtRfc3339(date_time_or_datetime: anytype) std.fmt.Formatter(fmtRfc3339Impl) {
-    return .{ .data = date_time_or_datetime };
-}
-
 /// Tests EpochSeconds -> DateTime and DateTime -> EpochSeconds
 fn testEpoch(secs: DateTime.EpochSubseconds, dt: DateTime) !void {
     const actual_dt = DateTime.fromEpoch(secs);
