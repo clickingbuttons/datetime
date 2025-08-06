@@ -146,8 +146,10 @@ pub fn Advanced(comptime DateT: type, comptime TimeT: type, comptime has_offset:
             return .{ .date = date, .time = time, .offset = offset };
         }
 
-        fn fmtRfc3339(self: Self, writer: anytype) !void {
-            try writer.print("{rfc3339}T{rfc3339}", .{ self.date, self.time });
+        fn fmtRfc3339(self: Self, writer: *std.Io.Writer) !void {
+            try self.date.fmtRfc3339(writer);
+            try writer.writeByte('T');
+            try self.time.fmtRfc3339(writer);
             if (self.offset == 0) {
                 try writer.writeByte('Z');
             } else {
@@ -160,17 +162,23 @@ pub fn Advanced(comptime DateT: type, comptime TimeT: type, comptime has_offset:
 
         pub fn format(
             self: Self,
-            comptime fmt: []const u8,
-            options: std.fmt.FormatOptions,
-            writer: anytype,
-        ) (@TypeOf(writer).Error || error{Range})!void {
-            _ = options;
+            writer: *std.Io.Writer,
+        ) std.Io.Writer.Error!void {
+            self.fmtRfc3339(writer) catch return error.WriteFailed;
+        }
 
-            if (std.mem.eql(u8, "rfc3339", fmt)) {
-                try self.fmtRfc3339(writer);
-            } else {
-                try writer.print("DateTime{{ .date = {}, .time = {} }}", .{ self.date, self.time });
+        pub fn formatStruct(
+            self: Self,
+            writer: *std.Io.Writer,
+        ) std.Io.Writer.Error!void {
+            writer.print("DateTime{{ .date = ", .{}) catch return error.WriteFailed;
+            self.date.formatStruct(writer) catch return error.WriteFailed;
+            writer.print(", .time = ", .{}) catch return error.WriteFailed;
+            self.time.formatStruct(writer) catch return error.WriteFailed;
+            if (comptime has_offset) {
+                writer.print(", .offset = {d}", .{self.offset}) catch return error.WriteFailed;
             }
+            writer.print(" }}", .{}) catch return error.WriteFailed;
         }
     };
 }
@@ -190,21 +198,21 @@ test Advanced {
     try expectEqual(T.init(1990, .dec, 31, 15, 59, 60, 0, -8 * s_per_hour), try T.parseRfc3339("1990-12-31T15:59:60-08:00"));
     try expectEqual(T.init(1937, .jan, 1, 12, 0, 27, 870, 20 * s_per_min), try T.parseRfc3339("1937-01-01T12:00:27.87+00:20"));
 
-    // negative offset 
+    // negative offset
     try expectEqual(T.init(1985, .apr, 12, 23, 20, 50, 520, -20 * s_per_min), try T.parseRfc3339("1985-04-12T23:20:50.52-00:20"));
     try expectEqual(T.init(1985, .apr, 12, 23, 20, 50, 520, -10 * s_per_hour - 20 * s_per_min), try T.parseRfc3339("1985-04-12T23:20:50.52-10:20"));
 
     var buf: [32]u8 = undefined;
-    var stream = std.io.fixedBufferStream(&buf);
-    try T.init(1937, .jan, 1, 12, 0, 27, 870, 20 * s_per_min).fmtRfc3339(stream.writer());
-    try std.testing.expectEqualStrings("1937-01-01T12:00:27.870+00:20", stream.getWritten());
+    var writer = std.io.Writer.fixed(&buf);
+    try T.init(1937, .jan, 1, 12, 0, 27, 870, 20 * s_per_min).fmtRfc3339(&writer);
+    try std.testing.expectEqualStrings("1937-01-01T12:00:27.870+00:20", writer.buffered());
 
-    // negative offset  
-    stream.reset();
-    try T.init(1937, .jan, 1, 12, 0, 27, 870, -20 * s_per_min).fmtRfc3339(stream.writer());
-    try std.testing.expectEqualStrings("1937-01-01T12:00:27.870-00:20", stream.getWritten());
+    // negative offset
+    writer = std.io.Writer.fixed(&buf);
+    try T.init(1937, .jan, 1, 12, 0, 27, 870, -20 * s_per_min).fmtRfc3339(&writer);
+    try std.testing.expectEqualStrings("1937-01-01T12:00:27.870-00:20", writer.buffered());
 
-    stream.reset();
-    try T.init(1937, .jan, 1, 12, 0, 27, 870, -1 * s_per_hour - 20 * s_per_min).fmtRfc3339(stream.writer());
-    try std.testing.expectEqualStrings("1937-01-01T12:00:27.870-01:20", stream.getWritten());
+    writer = std.io.Writer.fixed(&buf);
+    try T.init(1937, .jan, 1, 12, 0, 27, 870, -1 * s_per_hour - 20 * s_per_min).fmtRfc3339(&writer);
+    try std.testing.expectEqualStrings("1937-01-01T12:00:27.870-01:20", writer.buffered());
 }
